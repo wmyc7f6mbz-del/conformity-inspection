@@ -6,6 +6,8 @@
   <title>방송통신설비 기술기준 적합 조사·시험 평가표</title>
   <!-- PDF 변환 라이브러리 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- EmailJS 라이브러리 -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -39,6 +41,7 @@
       border-radius: 4px;
       cursor: pointer;
     }
+    .btn-email { background-color: #27ae60; color: #fff; }
     .btn-pdf { background-color: #2b579a; color: #fff; }
     .btn-reset { background-color: #e74c3c; color: #fff; }
 
@@ -95,7 +98,7 @@
       background: #fafafa;
     }
     canvas {
-      touch-action: none; /* 스크롤 방지 */
+      touch-action: none;
       display: block;
     }
 
@@ -120,7 +123,7 @@
     }
     .memo-area {
       width: 100%;
-      height: 42px; /* 약 2줄 높이 */
+      height: 42px;
       border: 1px dashed #ccc;
       outline: none;
       font-size: 12px;
@@ -146,9 +149,7 @@
       cursor: pointer;
     }
 
-    /* -------------------------------------------------- */
-    /* PDF 출력 시 페이지 자동 분할 옵션 설정 (핵심 CSS) */
-    /* -------------------------------------------------- */
+    /* PDF 분할 관련 옵션 */
     tr, td, th {
       page-break-inside: avoid !important;
       break-inside: avoid !important;
@@ -167,6 +168,7 @@
     <span class="status-msg" id="status-msg">✓ 작성 내용이 실시간 자동 저장됩니다.</span>
     <div class="btn-group">
       <button type="button" class="btn btn-reset" onclick="resetForm()">입력 초기화</button>
+      <button type="button" class="btn btn-email" onclick="sendEmail()">이메일 전송</button>
       <button type="button" class="btn btn-pdf" onclick="exportToPDF()">PDF 다운로드</button>
     </div>
   </div>
@@ -247,12 +249,22 @@
         </tr>
       </thead>
       <tbody id="survey-tbody">
-        <!-- 자바스크립트로 세부 항목 및 대항목 간 빈칸 자동 생성 -->
       </tbody>
     </table>
   </div>
 
   <script>
+    // ----------------------------------------------------
+    // EmailJS 연동 키 설정 (본인의 키값으로 교체)
+    // ----------------------------------------------------
+    const EMAILJS_PUBLIC_KEY = "Excvv85OUzgaU5d7S";
+    const EMAILJS_SERVICE_ID = "zog7txc";
+    const EMAILJS_TEMPLATE_ID = "2g9g0sa";
+
+    if (EMAILJS_PUBLIC_KEY !== "YOUR_PUBLIC_KEY") {
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+    }
+
     const rawData = [
       { cat: "1. 보호기 및 접지(규정 제7조)", sub: ["보호기 설치 여부", "보호기의 기술기준 준수 여부", "접지저항 적합 여부"] },
       { cat: "2. 예비전원설비(규정 제10조)", sub: ["축전지 및 발전기 설치 여부(사업용)", "예비전원 설치 여부(사업용 외 국선 10회선 이상)"] },
@@ -340,8 +352,6 @@
 
     rawData.forEach((group) => {
       catCounter++;
-      
-      // 대항목 행
       const catTr = document.createElement('tr');
       catTr.className = 'category-row';
       catTr.innerHTML = `
@@ -358,11 +368,9 @@
       `;
       tbody.appendChild(catTr);
 
-      // 세부 소항목 행
       group.sub.forEach((subTitle) => {
         subCounter++;
         const tr = document.createElement('tr');
-        
         const tdSub = document.createElement('td');
         tdSub.style.paddingLeft = "20px";
         tdSub.textContent = `- ${subTitle}`;
@@ -387,7 +395,6 @@
         tbody.appendChild(tr);
       });
 
-      // 대항목 간 빈칸 (두 줄 크기 메모란)
       const memoTr = document.createElement('tr');
       memoTr.className = 'memo-row';
       memoTr.innerHTML = `
@@ -456,14 +463,14 @@
     sigIds.forEach(id => initCanvas(id));
 
     // ----------------------------------------------------
-    // 자동 저장 및 복원 로직 (LocalStorage)
+    // 자동 저장 및 복원 로직
     // ----------------------------------------------------
     function saveFormData() {
       const data = {};
       document.querySelectorAll('.auto-save').forEach(el => {
         data[el.id] = el.value;
       });
-      localStorage.setItem('survey_form_data_v4', JSON.stringify(data));
+      localStorage.setItem('survey_form_data_v5', JSON.stringify(data));
     }
 
     function saveSignatures() {
@@ -474,7 +481,7 @@
     }
 
     function loadSavedData() {
-      const saved = localStorage.getItem('survey_form_data_v4');
+      const saved = localStorage.getItem('survey_form_data_v5');
       if (saved) {
         const data = JSON.parse(saved);
         Object.keys(data).forEach(id => {
@@ -509,7 +516,7 @@
 
     function resetForm() {
       if (confirm("작성된 모든 내용을 삭제하고 초기화하시겠습니까?")) {
-        localStorage.removeItem('survey_form_data_v4');
+        localStorage.removeItem('survey_form_data_v5');
         sigIds.forEach(id => localStorage.removeItem(`survey_sig_${id}`));
         location.reload();
       }
@@ -518,7 +525,7 @@
     window.addEventListener('load', loadSavedData);
 
     // ----------------------------------------------------
-    // PDF 다운로드 옵션 (자동 분할 옵션 강화)
+    // PDF 다운로드
     // ----------------------------------------------------
     function exportToPDF() {
       const clearBtns = document.querySelectorAll('.clear-btn');
@@ -531,11 +538,60 @@
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } // 대항목 및 행 단위 중간 잘림 자동 방지
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
       };
 
       html2pdf().set(opt).from(element).save().then(() => {
         clearBtns.forEach(btn => btn.style.display = 'inline-block');
+      });
+    }
+
+    // ----------------------------------------------------
+    // 이메일 직접 전송 로직 (EmailJS)
+    // ----------------------------------------------------
+    function sendEmail() {
+      if (EMAILJS_PUBLIC_KEY === "YOUR_PUBLIC_KEY") {
+        alert("EmailJS 연동 키가 설정되지 않았습니다.\n코드 하단의 키값을 먼저 입력해주세요.");
+        return;
+      }
+
+      const targetEmail = prompt("전송받을 사무실 이메일 주소를 입력하세요:");
+      if (!targetEmail) return;
+
+      const statusMsg = document.getElementById('status-msg');
+      statusMsg.textContent = "⏳ 이메일 전송 중입니다. 잠시만 기다려주세요...";
+
+      const clearBtns = document.querySelectorAll('.clear-btn');
+      clearBtns.forEach(btn => btn.style.display = 'none');
+
+      const element = document.getElementById('survey-form');
+      const opt = {
+        margin:       [8, 8, 8, 8],
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      // PDF 데이터 생성 후 EmailJS 전송
+      html2pdf().set(opt).from(element).outputPdf('datauristring').then((pdfBase64) => {
+        clearBtns.forEach(btn => btn.style.display = 'inline-block');
+
+        const templateParams = {
+          to_email: targetEmail,
+          org_name: document.getElementById('info-org').value || '미입력',
+          date_place: document.getElementById('info-date-place').value || '미입력',
+          content_pdf: pdfBase64
+        };
+
+        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+          .then(() => {
+            alert("✓ 사무실 이메일로 전송이 완료되었습니다!");
+            statusMsg.textContent = "✓ 작성 내용이 실시간 자동 저장됩니다.";
+          }, (err) => {
+            alert("전송 실패: " + JSON.stringify(err));
+            statusMsg.textContent = "❌ 이메일 전송 실패";
+          });
       });
     }
   </script>
