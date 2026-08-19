@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>방송통신설비 기술기준 적합 조사·시험 평가표</title>
+  <!-- PDF 변환 라이브러리 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .action-bar {
+      max-width: 950px;
+      margin: 0 auto 15px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .status-msg {
+      font-size: 13px;
+      color: #27ae60;
+      font-weight: bold;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: bold;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-pdf { background-color: #2b579a; color: #fff; }
+    .btn-reset { background-color: #e74c3c; color: #fff; }
+
+    /* Paper Form Layout */
+    .paper-container {
+      max-width: 950px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 30px 35px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      font-size: 20px;
+      margin-bottom: 25px;
+      text-decoration: underline;
+      text-underline-offset: 6px;
+    }
+
+    /* Basic Info Table */
+    .info-table, .survey-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    .info-table td {
+      border: 1px solid #000;
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+    .info-table td.label {
+      background-color: #f0f0f0;
+      font-weight: bold;
+      width: 12%;
+      text-align: center;
+    }
+    .input-text {
+      width: 100%;
+      border: none;
+      border-bottom: 1px dashed #999;
+      outline: none;
+      font-size: 13px;
+      padding: 2px 4px;
+    }
+
+    /* Signature Box */
+    .sig-inline {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sig-canvas-box {
+      border: 1px solid #ccc;
+      background: #fafafa;
+    }
+    canvas {
+      touch-action: none; /* 스크롤 방지 */
+      display: block;
+    }
+
+    /* Survey Table */
+    .survey-table th, .survey-table td {
+      border: 1px solid #000;
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+    .survey-table th {
+      background-color: #f0f0f0;
+      text-align: center;
+      font-weight: bold;
+    }
+    .category-row {
+      background-color: #f2f4f7;
+      font-weight: bold;
+    }
+    .memo-row td {
+      background-color: #fafafa;
+      padding: 4px 8px;
+    }
+    .memo-area {
+      width: 100%;
+      height: 42px; /* 약 2줄 높이 */
+      border: 1px dashed #ccc;
+      outline: none;
+      font-size: 12px;
+      font-family: inherit;
+      resize: vertical;
+      padding: 4px;
+    }
+    .text-center { text-align: center; }
+    .select-result {
+      width: 100%;
+      padding: 3px;
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+    }
+
+    .clear-btn {
+      font-size: 10px;
+      padding: 1px 4px;
+      background: #e0e0e0;
+      border: 1px solid #999;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    /* -------------------------------------------------- */
+    /* PDF 출력 시 페이지 자동 분할 옵션 설정 (핵심 CSS) */
+    /* -------------------------------------------------- */
+    tr, td, th {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    .category-row {
+      page-break-before: auto;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 상단 버튼 및 상태 안내 -->
+  <div class="action-bar">
+    <span class="status-msg" id="status-msg">✓ 작성 내용이 실시간 자동 저장됩니다.</span>
+    <div class="btn-group">
+      <button type="button" class="btn btn-reset" onclick="resetForm()">입력 초기화</button>
+      <button type="button" class="btn btn-pdf" onclick="exportToPDF()">PDF 다운로드</button>
+    </div>
+  </div>
+
+  <!-- 조사표 양식 전체 영역 -->
+  <div class="paper-container" id="survey-form">
+    <h1>방송통신설비 기술기준 적합 조사·시험 평가표</h1>
+
+    <!-- 기본 정보 영역 -->
+    <table class="info-table">
+      <tr>
+        <td class="label">기관명</td>
+        <td><input type="text" id="info-org" class="input-text auto-save"></td>
+        <td class="label">일자 및 장소</td>
+        <td colspan="3"><input type="text" id="info-date-place" class="input-text auto-save"></td>
+      </tr>
+      <tr>
+        <td class="label">입회자 1</td>
+        <td>
+          <div class="sig-inline">
+            <input type="text" id="info-witness-name-1" class="input-text auto-save" placeholder="성명" style="width: 65px;">
+            <div>
+              <div class="sig-canvas-box">
+                <canvas id="sig-canvas-w1" width="90" height="32"></canvas>
+              </div>
+              <button type="button" class="clear-btn" onclick="clearCanvas('sig-canvas-w1')">지우기</button>
+            </div>
+          </div>
+        </td>
+        <td class="label">입회자 2</td>
+        <td colspan="3">
+          <div class="sig-inline">
+            <input type="text" id="info-witness-name-2" class="input-text auto-save" placeholder="성명" style="width: 65px;">
+            <div>
+              <div class="sig-canvas-box">
+                <canvas id="sig-canvas-w2" width="90" height="32"></canvas>
+              </div>
+              <button type="button" class="clear-btn" onclick="clearCanvas('sig-canvas-w2')">지우기</button>
+            </div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="label">조사자 1</td>
+        <td>
+          <div class="sig-inline">
+            <input type="text" id="info-inspector-name-1" class="input-text auto-save" placeholder="성명" style="width: 65px;">
+            <div>
+              <div class="sig-canvas-box">
+                <canvas id="sig-canvas-i1" width="90" height="32"></canvas>
+              </div>
+              <button type="button" class="clear-btn" onclick="clearCanvas('sig-canvas-i1')">지우기</button>
+            </div>
+          </div>
+        </td>
+        <td class="label">조사자 2</td>
+        <td colspan="3">
+          <div class="sig-inline">
+            <input type="text" id="info-inspector-name-2" class="input-text auto-save" placeholder="성명" style="width: 65px;">
+            <div>
+              <div class="sig-canvas-box">
+                <canvas id="sig-canvas-i2" width="90" height="32"></canvas>
+              </div>
+              <button type="button" class="clear-btn" onclick="clearCanvas('sig-canvas-i2')">지우기</button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- 세분화된 평가표 데이터 테이블 -->
+    <table class="survey-table">
+      <thead>
+        <tr>
+          <th style="width: 58%;">조사항목</th>
+          <th style="width: 18%;">결과</th>
+          <th style="width: 24%;">비고</th>
+        </tr>
+      </thead>
+      <tbody id="survey-tbody">
+        <!-- 자바스크립트로 세부 항목 및 대항목 간 빈칸 자동 생성 -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const rawData = [
+      { cat: "1. 보호기 및 접지(규정 제7조)", sub: ["보호기 설치 여부", "보호기의 기술기준 준수 여부", "접지저항 적합 여부"] },
+      { cat: "2. 예비전원설비(규정 제10조)", sub: ["축전지 및 발전기 설치 여부(사업용)", "예비전원 설치 여부(사업용 외 국선 10회선 이상)"] },
+      { cat: "3. 절연저항 및 누화(규정 제12조 및 제13조)", sub: ["절연저항(10MΩ 이상)", "꼬임 케이블의 누화 감쇄량(68dB 이상)"] },
+      { cat: "4. 대체접속 계통 설정 여부(신뢰성 고시 별표1)", sub: ["중요통신국사 간 교환망 이원화 여부"] },
+      { cat: "5. 복수 전송로 구성(신뢰성 고시 별표1)", sub: ["중요통신국사 간 복수 전송로 구성 여부"] },
+      { cat: "6. 분산 수용 여부(신뢰성 고시 별표1)", sub: ["중요통신국사 간 통신회선을 복수의 전송로 설비에 분산 수용 여부", "다수의 통신국사에 통신 트래픽 분산 여부", "타 사업자를 통한 서비스 제공 여부(단일 통신국사에서 서비스 제공 시)"] },
+      { cat: "7. 전송선로 설비의 동작 감시(신뢰성 고시 별표1)", sub: ["전송선로설비의 동작 감시기능 구비 여부", "동작 감시기능을 통한 예비설비로의 전환 가능 여부"] },
+      { cat: "8. 교환설비의 이상폭주 등의 감시 및 통지(신뢰성 고시 별표1)", sub: ["교환설비의 트래픽 감시 및 이상폭주 검출·통보 기능 구비 여부", "이상폭주 발생 시 이용자에게 통지하는 기능 구비 여부 (트래픽 제어 기능 보유 시 대체 가능)"] },
+      { cat: "9. 교환설비의 통신 접속 규제(신뢰성 고시 별표1)", sub: ["이상 폭주 또는 트래픽 발생 시 접속규제 기능 구비 여부 (트래픽 제어 기능 보유 시 대체 가능)"] },
+      { cat: "10. 코어망(백본망) 오류확산 방지(신뢰성 고시 별표1)", sub: ["코어망(백본망) 내 장비들의 네트워크 계층 간 오류 확산 차단 여부"] },
+      { cat: "11. 코어망(백본망)과 가입자망 분리 구축(신뢰성 고시 별표1)", sub: ["지역 가입자망 간 오류 전파 방지를 위한 분리 구축 여부"] },
+      { cat: "12. 무선망의 인터넷 접속 이중화(신뢰성 고시 별표1)", sub: ["무선망 사업자의 평시 외 '별도의 인터넷 접속경로' 확보 여부"] },
+      { cat: "13. 방송통신설비의 종합적 관리(신뢰성 고시 별표1)", sub: ["트래픽 폭주 등 망 상태를 감지할 수 있는 종합망관리시스템 구비 여부"] },
+      { cat: "14. 통신망의 비밀보호 및 신뢰성 제고(신뢰성 고시 별표1)", sub: [
+        "이용자 식별이 필요한 망의 경우 인증 및 등록 기능 구비 여부",
+        "이동통신망/휴대전화망 사용 주파수대역 및 접속방식에 따른 인증/불법접속 검출 기능 구비 여부",
+        "설비 파괴 또는 타인 데이터 절취 방지 조치 강구 여부",
+        "이동통신용 무선설비 초기 접속 시 단말기-망 간 상호인증 및 주기적 재인증 기능 보유 여부 (28GHz/4.7GHz 제외)",
+        "이용자 요구 시 서비스 트래픽 암호화 처리 기능 보유 여부 (28GHz/4.7GHz 제외)",
+        "불법 복제 가입자식별모듈(SIM) 결합 단말기 검출 기능 보유 여부 (28GHz/4.7GHz 제외)",
+        "분실/도난 신고 단말기 접속 시 검출 및 서비스 제한 기능 보유 여부 (28GHz/4.7GHz 제외)"
+      ]},
+      { cat: "15. 예비기기 등의 설치(신뢰성 고시 별표1)", sub: ["설비의 중요도 등에 따른 예비기기 설치 여부"] },
+      { cat: "16. 시험기기의 확보(신뢰성 고시 별표1)", sub: ["설비 점검(검사)에 필요한 시험기기 확보 또는 준하는 조치 여부"] },
+      { cat: "17. 교환설비의 통신량 측정자료 기록(신뢰성 고시 별표1)", sub: ["이용자 회선별 통신량, 횟수 등 기록 기능 보유 여부"] },
+      { cat: "18. 옥외설비 설치 기준(신뢰성 고시 별표1)", sub: [
+        "풍해 대책 강구 여부", "지진 대책 강구 여부", "수해 방지 조치 강구 여부",
+        "맨홀 등 내부 접속함체 거치대 이용 설치 여부", "지하 통신구 개구부 위치 적정성 및 침수방지장치 설치 여부",
+        "제3자 접촉방지용 맨홀 잠금장치 설치 여부", "낙뢰 대책 강구 여부 (권고)", "진동 대책 강구 여부 (권고)",
+        "화재 대책 강구 여부 (권고)", "내수(방수) 기능 구비 여부 (권고)", "동결 대책 강구 여부 (권고)",
+        "염해 등 대책 (권고)", "고온·저온 대책 (권고)", "다습도 대책 (권고)",
+        "고신뢰도 부품 사용 (해저 등 특수장소) (권고)", "제3자 접촉 및 침입 방지 조치 강구 여부 (권고)"
+      ]},
+      { cat: "19. 통신국사의 입지조건(신뢰성 고시 별표1)", sub: ["풍수해, 전자파, 진동으로부터 안전 여부(통신국사 및 통신기계실)"] },
+      { cat: "20. 통신국사의 조건 및 선정(신뢰성 고시 별표1)", sub: [
+        "지진대책 기준 적합 여부", "내진구조 건축물 선정 여부 (권고)",
+        "내화구조 건축물 선정 여부 (권고)", "바닥하중에 대한 소요 구조 내력 충분 여부"
+      ]},
+      { cat: "21. 통신기계실의 구조 조건(신뢰성 고시 별표1)", sub: [
+        "통신기계실 전용 공간 설치 여부", "바닥시설 지진대책 기준 적합 여부",
+        "비, 바람, 자외선 및 대기먼지 등에 의한 피해 방지 조치 여부", "바닥, 내벽, 천장 내장재 지진 대비 조치 강구 여부 (권고)"
+      ]},
+      { cat: "22. 통신국사 및 통신기계실의 출입제한 기능(신뢰성 고시 별표1)", sub: ["모든 출입구 시건장치 설치 및 출입통제관리 실시 여부 (권고)"] },
+      { cat: "23. 통신국사의 화재 및 수해대책(신뢰성 고시 별표1)", sub: [
+        "주요시설 소화기, 자동화재탐지설비 및 자동소화설비 설치 여부", "주요시설 마루, 내벽, 천장 마감재 불연/준불연 재료 여부",
+        "통신국사 출입구 침수 예상 높이보다 높게 설치 여부", "주요시설 지상 설치 여부 (지상 확보 불가 시 방수 조치)",
+        "지하공간 출입구 침수 방지턱 설치 여부"
+      ]},
+      { cat: "24. 통신기계실의 온·습도 관리(신뢰성 고시 별표1)", sub: ["항온·항습 기능 구비 여부 (권고)"] },
+      { cat: "25. 통신기계실의 분진·유해가스 관리(신뢰성 고시 별표1)", sub: ["부식성 가스나 분진 혼입 시 배제 기능 구비 여부 (권고)"] },
+      { cat: "26. 통신망 보전·운용 기준 설정(신뢰성 고시 별표1)", sub: ["통신망 보전·운용 기준 설정 및 관련 데이터 집계·관리 여부"] },
+      { cat: "27. 상호접속 대응(신뢰성 고시 별표1)", sub: ["상호접속 시 접속대상 설계공정 조정 및 시행 여부 (권고)", "상호접속 보전·운용체제 구축 여부 (권고)"] },
+      { cat: "28. 방송통신망 오류 예방과 대응(신뢰성 고시 별표1)", sub: [
+        "전기통신역무 등 안전성 점검결과 기초 취약점 분석·평가 여부",
+        "코어망 관련 신규장비 개통/망 구조변경 등 모의실험체계 사전 검증 여부",
+        "네트워크 설정 작업 접근/작업/명령어 통제 시스템 구축 및 기록·관리 여부"
+      ]},
+      { cat: "29. 데이터의 관리(신뢰성 고시 별표1)", sub: [
+        "통신설비/이용자 데이터 파괴 시 복원용 보조기억장치 구비 여부", "중요 데이터 전용 보관고 보관 여부",
+        "데이터 보관실/보관고 별도 방화구획 설정 및 잠금장치 설정 여부", "전자파 영향 우려 시 대책 강구 여부",
+        "광역 재해 우려 타 국사 또는 방화구획 보관 여부", "데이터 통신비밀보호/데이터보호/복원 가능성 기준 분류·관리 여부",
+        "관계자 비밀보호 의무범위 주지 여부", "데이터 보관실 지진대책 강구 여부 (권고)",
+        "데이터 중요도에 따른 복사금지/발행부수/보유자 제한 관리 여부 (권고)"
+      ]},
+      { cat: "30. 비상사태의 대응(신뢰성 고시 별표1)", sub: [
+        "통신설비 고장 대비 응급복구대책 수립 여부", "중요 전송로 설비 응급 복구용 케이블 등 구비 여부",
+        "장애 발생 시 이동형 기지국 등을 통한 통신회선 설정 가능 여부", "연락체계, 권한 범위 등 비상사태체제 명확 여부",
+        "복구대책 방법 및 순서 구비 여부 (권고)", "직원 집합/응급/복구활동 연락체계 마련 여부 (권고)",
+        "광역 응급구호 체제 명확 여부 (권고)", "정부부처/관계기관 비상연락체계 마련 여부 (권고)"
+      ]},
+      { cat: "31. 방송통신설비의 시험 및 결과 기록·관리(방발법 제28조제2항)", sub: ["사업자의 방송통신설비 적합여부 자체 시험 및 기록·관리"] },
+      { cat: "32. 전송설비 및 선로설비의 보호(규정 제8조 및 접지설비 고시)", sub: ["다른 사람 설치 설비/차량 통행 피해 방지 설치 여부", "가공통신선 하천 횡단 시 안전표지(항공표지등) 설치 여부"] },
+      { cat: "33. 선로설비의 설치 및 철거방법(규정 제18조 및 접지설비 고시)", sub: [
+        "가공통신선 지지물 등주 방지 적정 여부", "가공통신선 높이 적정 여부",
+        "통신선과 저/고압 전력선 이격거리 적정 여부", "동일 지지물 통신선-전력선 이격거리 적정 여부",
+        "지중/해저 통신선과 전력선 이격거리 적정 여부"
+      ]},
+      { cat: "34. 통신장비류의 지진 대책(신뢰성 고시 제5조 및 별표2)", sub: ["통신장비, 전원설비, 부대설비 지진 대책 적정 여부"] }
+    ];
+
+    const tbody = document.getElementById('survey-tbody');
+    let catCounter = 0;
+    let subCounter = 0;
+
+    rawData.forEach((group) => {
+      catCounter++;
+      
+      // 대항목 행
+      const catTr = document.createElement('tr');
+      catTr.className = 'category-row';
+      catTr.innerHTML = `
+        <td>${group.cat}</td>
+        <td class="text-center">
+          <select id="cat-res-${catCounter}" class="select-result auto-save">
+            <option value="">선택</option>
+            <option value="적합">적합</option>
+            <option value="부적합">부적합</option>
+            <option value="해당없음">해당없음</option>
+          </select>
+        </td>
+        <td><input type="text" id="cat-note-${catCounter}" class="input-text auto-save"></td>
+      `;
+      tbody.appendChild(catTr);
+
+      // 세부 소항목 행
+      group.sub.forEach((subTitle) => {
+        subCounter++;
+        const tr = document.createElement('tr');
+        
+        const tdSub = document.createElement('td');
+        tdSub.style.paddingLeft = "20px";
+        tdSub.textContent = `- ${subTitle}`;
+
+        const tdRes = document.createElement('td');
+        tdRes.className = 'text-center';
+        tdRes.innerHTML = `
+          <select id="sub-res-${subCounter}" class="select-result auto-save">
+            <option value="">선택</option>
+            <option value="적합">적합</option>
+            <option value="부적합">부적합</option>
+            <option value="해당없음">해당없음</option>
+          </select>
+        `;
+
+        const tdNote = document.createElement('td');
+        tdNote.innerHTML = `<input type="text" id="sub-note-${subCounter}" class="input-text auto-save">`;
+
+        tr.appendChild(tdSub);
+        tr.appendChild(tdRes);
+        tr.appendChild(tdNote);
+        tbody.appendChild(tr);
+      });
+
+      // 대항목 간 빈칸 (두 줄 크기 메모란)
+      const memoTr = document.createElement('tr');
+      memoTr.className = 'memo-row';
+      memoTr.innerHTML = `
+        <td colspan="3">
+          <textarea id="cat-memo-${catCounter}" class="memo-area auto-save" placeholder="[${group.cat.split('.')[0]}번 항목 관련 메모 / 특이사항 작성란]"></textarea>
+        </td>
+      `;
+      tbody.appendChild(memoTr);
+    });
+
+    // ----------------------------------------------------
+    // Canvas 전자서명 로직
+    // ----------------------------------------------------
+    function initCanvas(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      let isDrawing = false;
+
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: clientX - rect.left, y: clientY - rect.top };
+      }
+
+      function startDraw(e) { isDrawing = true; draw(e); }
+      function endDraw() { 
+        if (isDrawing) {
+          isDrawing = false; 
+          ctx.beginPath();
+          saveSignatures();
+        }
+      }
+      function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#000';
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+      }
+
+      canvas.addEventListener('mousedown', startDraw);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', endDraw);
+      canvas.addEventListener('mouseleave', endDraw);
+
+      canvas.addEventListener('touchstart', startDraw);
+      canvas.addEventListener('touchmove', draw);
+      canvas.addEventListener('touchend', endDraw);
+    }
+
+    function clearCanvas(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+      saveSignatures();
+    }
+
+    const sigIds = ['sig-canvas-w1', 'sig-canvas-w2', 'sig-canvas-i1', 'sig-canvas-i2'];
+    sigIds.forEach(id => initCanvas(id));
+
+    // ----------------------------------------------------
+    // 자동 저장 및 복원 로직 (LocalStorage)
+    // ----------------------------------------------------
+    function saveFormData() {
+      const data = {};
+      document.querySelectorAll('.auto-save').forEach(el => {
+        data[el.id] = el.value;
+      });
+      localStorage.setItem('survey_form_data_v4', JSON.stringify(data));
+    }
+
+    function saveSignatures() {
+      sigIds.forEach(id => {
+        const dataUrl = document.getElementById(id).toDataURL();
+        localStorage.setItem(`survey_sig_${id}`, dataUrl);
+      });
+    }
+
+    function loadSavedData() {
+      const saved = localStorage.getItem('survey_form_data_v4');
+      if (saved) {
+        const data = JSON.parse(saved);
+        Object.keys(data).forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = data[id];
+        });
+      }
+
+      sigIds.forEach(id => {
+        loadSig(id, localStorage.getItem(`survey_sig_${id}`));
+      });
+    }
+
+    function loadSig(canvasId, dataUrl) {
+      if (!dataUrl) return;
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = function() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+      };
+      img.src = dataUrl;
+    }
+
+    document.addEventListener('change', (e) => {
+      if (e.target.classList.contains('auto-save')) saveFormData();
+    });
+    document.addEventListener('keyup', (e) => {
+      if (e.target.classList.contains('auto-save')) saveFormData();
+    });
+
+    function resetForm() {
+      if (confirm("작성된 모든 내용을 삭제하고 초기화하시겠습니까?")) {
+        localStorage.removeItem('survey_form_data_v4');
+        sigIds.forEach(id => localStorage.removeItem(`survey_sig_${id}`));
+        location.reload();
+      }
+    }
+
+    window.addEventListener('load', loadSavedData);
+
+    // ----------------------------------------------------
+    // PDF 다운로드 옵션 (자동 분할 옵션 강화)
+    // ----------------------------------------------------
+    function exportToPDF() {
+      const clearBtns = document.querySelectorAll('.clear-btn');
+      clearBtns.forEach(btn => btn.style.display = 'none');
+
+      const element = document.getElementById('survey-form');
+      const opt = {
+        margin:       [8, 8, 8, 8],
+        filename:     '방송통신설비_기술기준_적합_조사_시험_평가표.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } // 대항목 및 행 단위 중간 잘림 자동 방지
+      };
+
+      html2pdf().set(opt).from(element).save().then(() => {
+        clearBtns.forEach(btn => btn.style.display = 'inline-block');
+      });
+    }
+  </script>
+</body>
+</html>
